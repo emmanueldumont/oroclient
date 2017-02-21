@@ -61,6 +61,14 @@ void sigint_handler(int dummy);
   */
 void oroClientCallback(const std_msgs::String::ConstPtr& msg);
 
+/**
+  * \fn void oroClientCallback(const std_msgs::String::ConstPtr& msg)
+  * \param[in] msg ROS message received
+  *
+  * \brief This function is a callback. the program wait until a message on "orochatter" is received.
+  *        From this function, a parser is called in order to manage this message
+  */
+void oroClientSendBack(char * buff2Send);
 
 
 ////////////////////////////////////////////
@@ -204,6 +212,7 @@ void sigint_handler(int dummy)
     exit(EXIT_SUCCESS); // Shut down the program
 }
 
+
 /**
   * \fn void oroClientCallback(const std_msgs::String::ConstPtr& msg)
   * \param[in] msg ROS message received
@@ -227,14 +236,47 @@ void oroClientCallback(const std_msgs::String::ConstPtr& msg)
     retVal = orosender(buff2TR);
   }
   
-  #warning "Author: -oroClientCallback: Returned Buffer from oroserver is not checked back"
-  
-  // Buffer should be cleaned if it is not used anymore
+  // Send back the received data thanks to the buff2TR
   if(retVal != 0)
   {
+    oroClientSendBack(buff2TR);
+
+    // Buffer should be cleaned if it is not used anymore
     free(buff2TR);
   }
 }
 
 
+/**
+  * \fn void oroClientSendBack(char * buff2Send)
+  * \param[in] buff2Send Answer from oro server to send back to the initial node 
+  *
+  * \brief This function just send back the answer from OroServer on a specific topic "oroChatterSendBack"
+  */
+void oroClientSendBack(char * buff2Send)
+{
+#warning "Author: -oroClientCallback: Returned Buffer from oroserver is not checked back"
+  ros::NodeHandle n;
+  
+  // Message to send back
+  std_msgs::String msg2Send;
+  
+  // Create the publisher
+  ros::Publisher oroChatter_pub = n.advertise<std_msgs::String>("oroChatterSendBack", 1000);
+  usleep(300000); // Necessary to initialize the ros system
 
+  ros::Rate loop_rate(10);
+  
+  ROS_INFO("- Send back: --%s--",buff2Send);
+  
+  // Reconstruct the mesasge to send
+  std::string s(buff2Send);
+  msg2Send.data = s;
+  
+  
+  // Publish the returned message
+  oroChatter_pub.publish(msg2Send);
+  
+  ros::spinOnce();
+  loop_rate.sleep();
+}

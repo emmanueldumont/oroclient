@@ -224,8 +224,7 @@ char * clearInstanceManager(char * str)
 
 /**
   * \fn char * findCommandManager(char * str)
-  * \brief NOT IMPLEMENTED YET
-  * --
+  * \brief
   *
   * This function analyses the received message from ROS (number of argument).
   *        After analysis, it constructs a command which should be like:
@@ -245,10 +244,9 @@ char * clearInstanceManager(char * str)
   */
 char * findCommandManager(char * str)
 {
-  #warning "Author: -findCommandManager: Not implemented yet"
   int sizeStr = 0;   // Size of a string
   char * retMsg2Send = NULL; // Buffer to send to oroserver
-  
+    
   // Allocate the buffer to send to oroserver
   retMsg2Send = (char *) malloc( SIZE_BUFF * sizeof(char));
   memset(retMsg2Send, '\0', SIZE_BUFF);
@@ -263,7 +261,7 @@ char * findCommandManager(char * str)
   
   if( (argN[0] == NULL) || (argN[1] == NULL) )
   {
-    ROS_INFO("\t- ERROR when parsing command, message is too long");
+    ROS_INFO("\t- ERROR when parsing command, Not enough Argument in the asked command. Should be ID#Command#Arg1#Arg2");
     
     
     free(retMsg2Send);

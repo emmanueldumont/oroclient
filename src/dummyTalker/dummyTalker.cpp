@@ -1,18 +1,40 @@
 #include "ros/ros.h"
 #include "std_msgs/String.h"
 
+#include <orolib/orolib.hpp>
+
 #include <sstream>
 
-
-enum enCommand
+void oroAnswerCallback(const std_msgs::String::ConstPtr& msg)
 {
-    CMD_ADD_INST = 1,
-    CMD_ADD_PROP,
-    CMD_FIND,
-    CMD_REMOVE,
-    LAST_CMD
-};
 
+  char * ok = NULL;  // Ok of the sender
+  char * knowledge = NULL; // Knowledge asked by the client
+  char * str = NULL; // Local copy of the message received from the connected chatter
+  int sizeStr = 0;
+    
+  ROS_INFO ("- Parsing received message");
+  
+  // Get size of the received buffer 'including the '\0'
+  sizeStr = strlen(msg->data.c_str())+1;
+  
+  // Allocate and add the data from the received packet to the working buffer
+  str = (char *) malloc( sizeStr * sizeof(char));
+  snprintf(str, sizeStr,"%s",msg->data.c_str());
+  
+  // Reinit data
+  sizeStr = 0;
+  
+  // Parse with the Delimiter and take the command
+  // The id received from the client is not used currently
+  ok = strtok (str,"\n");
+  knowledge = strtok (NULL,"\n");
+  
+  ROS_INFO("%s", msg->data.c_str());
+  
+  //exit(EXIT_SUCCESS);
+
+}
 
 /**
  * This tutorial demonstrates simple sending of messages over the ROS system.
@@ -73,8 +95,7 @@ int main(int argc, char **argv)
   msg.data = ss.str();
 
   ROS_INFO("%s", msg.data.c_str());
-	
-
+  
   /**
    * The publish() function is how you send messages. The parameter
    * is the message object. The type of this object must agree with the type
@@ -83,23 +104,24 @@ int main(int argc, char **argv)
    */
   oroChatter_pub.publish(msg);
   
-  ros::spinOnce();
-
-  loop_rate.sleep();
+  sleep(1);
   
+  // Create the subscriber
+	ros::NodeHandle ns;
+	ros::Subscriber sub = ns.subscribe("oroChatterSendBack", 1000, oroAnswerCallback);
+
   
   ss.str("");
-  enumCmd = (char)CMD_REMOVE;
-  ss << "BigBrother#"<<enumCmd<<"#remi";
+  enumCmd = (char)CMD_FIND;
+  ss << "BigBrother#"<<enumCmd<<"#isIn#Kitchen";
   msg.data = ss.str();
   
   ROS_INFO("%s", msg.data.c_str());
   
   oroChatter_pub.publish(msg);
-
-  ros::spinOnce();
-
-  loop_rate.sleep();
+  
+  // ros::spin() will enter a loop, pumping callbacks.
+  ros::spin();
 
   return 0;
 }

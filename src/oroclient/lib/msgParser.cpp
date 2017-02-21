@@ -125,7 +125,7 @@ char * parserMsgFromClient(const std_msgs::String::ConstPtr& msg)
   * \return 0 If problems occured, 1 otherwise
   * 
   * \brief This function is call by several other function. If a problem occurs, the input string is freed and 0 is return.
-  *        Otherwise 1 is return and the answer of OROServer is written in the input/output buffer : buff2TR
+  *        Otherwise 1 is returned and the answer of OROServer is written in the input/output buffer : buff2TR
   */
 int orosender(char * buff2TR)
 {
