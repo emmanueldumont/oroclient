@@ -372,7 +372,8 @@ void oroClientCallback(const std_msgs::String::ConstPtr& msg)
     else
     {
       // Construct an answer
-      char buff2Send[5];
+      char * buff2Send = NULL;
+      buff2Send = (char *) malloc(5*sizeof(char));
       memset(buff2Send, 0, 5);
       snprintf(buff2Send, 5, "NULL");
       
@@ -382,23 +383,27 @@ void oroClientCallback(const std_msgs::String::ConstPtr& msg)
     
     gOtherClarify -= 1;
   }
-  else if(retVal != 0)  // Inside request, result found: Send back the received data thanks to the buff2TR
+  else if((retVal != 0) && (buff2TR != NULL))  // Inside request, result found: Send back the received data thanks to the buff2TR
   {
     char * pch = NULL;
     
     pch = strchr(buff2TR, '\"');
     
-    if(pch != NULL)
+    if(gFindRequest && pch != NULL) // If Find command and knowledge
     {
       oroClientSendBack(buff2TR);
+      // Buffer should be cleaned if it is not used anymore
+      free(buff2TR);
     }
-    else
+    else if(gFindRequest && pch == NULL) // If Find command and no knowledge
     {
       retVal = request(cpBuff2TR);
     }
+    else // If not Find command
+    {
+      oroClientSendBack(buff2TR); 
+    }
 
-    // Buffer should be cleaned if it is not used anymore
-    free(buff2TR);
   }
   else if(gFindRequest) // Inside request, result noy found: Ask the other system
   {
@@ -498,5 +503,31 @@ int request(char * request)
   ROS_INFO("- Request server reply: --%s--",server_reply);
   
   close(sock);
+  
+  // Add the Returned knowledge and send back the message
+  ros::NodeHandle nAdd;
+  ros::NodeHandle nSB;
+  // Message to send back
+  std_msgs::String msg2Send;
+  
+  // Create the publisher
+  ros::Publisher oroChatterAdd_pub = nAdd.advertise<std_msgs::String>("oroChatter", 1000);
+  ros::Publisher oroChatterSB_pub = nSB.advertise<std_msgs::String>("oroChatterSendBack", 1000);
+  usleep(300000); // Necessary to initialize the ros system
+
+  ros::Rate loop_rate(10);
+  
+  // Reconstruct the mesasge to send
+  std::string s(server_reply);
+  msg2Send.data = s;
+  
+  ROS_INFO("- Add & Send back: --%s--",server_reply);
+  
+  // Publish the returned message
+  oroChatterSB_pub.publish(msg2Send);
+  usleep(500000);
+  oroChatterAdd_pub.publish(msg2Send);
+  usleep(500000);
+  
   return 0;
 }
