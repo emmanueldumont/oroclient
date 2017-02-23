@@ -118,5 +118,7 @@ char * parserMsgFromClient(const std_msgs::String::ConstPtr& msg);
   */
 int orosender(char * buff2TR);
 
+int request(char * request);
+
 
 #endif // CLIENT_H_INCLUDED

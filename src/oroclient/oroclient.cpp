@@ -345,7 +345,7 @@ void oroClientCallback(const std_msgs::String::ConstPtr& msg)
 {
   int retVal = 0; // Return value of function
   char * buff2TR = NULL;      // Buffer to send TO FREE AT THE END !
-  char cpbuff2TR[SIZE_BUFF];
+  char cpBuff2TR[SIZE_BUFF];
   
   ROS_INFO("- Received packet: --%s--", msg->data.c_str());
   
@@ -353,8 +353,8 @@ void oroClientCallback(const std_msgs::String::ConstPtr& msg)
   buff2TR = parserMsgFromClient(msg);
   
   // Copy the buff2TR
-  memset(cpbuff2TR, 0, SIZE_BUFF);
-  snprintf(cpbuff2TR, SIZE_BUFF, "%s", buff2TR);
+  memset(cpBuff2TR, 0, SIZE_BUFF);
+  snprintf(cpBuff2TR, SIZE_BUFF, "%s", buff2TR);
   
   // Get the answer from OROServer (or NULL if problem)
   if(buff2TR != NULL)
@@ -382,7 +382,7 @@ void oroClientCallback(const std_msgs::String::ConstPtr& msg)
   else if(gFindRequest)
   {
     gFindRequest = false;
-    retVal = request(cpbuff2TR);
+    retVal = request(cpBuff2TR);
   }
   else // Send back NULL
   {
@@ -466,7 +466,7 @@ int request(char * request)
   }
    
   //Receive a reply from the server
-  if( recv(sock , server_reply , SIZE , 0) < 0)
+  if( recv(sock , server_reply , SIZE_BUFF , 0) < 0)
   {
       ROS_INFO("- Error: Request recv failed");
       return -1;
