@@ -241,7 +241,7 @@ int main(int argc, char ** argv)
         exit(EXIT_FAILURE);
       }
       else if (retval == 0){
-        ROS_INFO("- No data within One second");
+        //ROS_INFO("- No data within One second");
       }
       else // Accept a connection (creating a data pipe)
       {
@@ -262,12 +262,10 @@ int main(int argc, char ** argv)
         ros::Rate loop_rate(10);
         std_msgs::String msg;
 
+        // Copy received string into msg to send
         std::stringstream ss;
         std::string s(rcvBuffer);
-
-        char enumCmd = 0;
-        enumCmd = (char)CMD_FIND;
-        ss << "BigBrother#"<<enumCmd<<s;
+        ss << s;
         msg.data = ss.str();
 
         ROS_INFO("%s", msg.data.c_str());
@@ -280,7 +278,6 @@ int main(int argc, char ** argv)
         loop_rate.sleep();
       }
     
-      ROS_INFO("- Machin false");
       // Check if received message from local node on oroChatter
       ros::spinOnce();
       r.sleep();
@@ -362,26 +359,49 @@ void oroClientCallback(const std_msgs::String::ConstPtr& msg)
     retVal = orosender(buff2TR);
   }
   
-  if(gOtherClarify > 0)
+  if(gOtherClarify > 0) // If it's an outside request
   {
-    // Answer result
-    send(gSocketInfo.clientfd, buff2TR, strlen(buff2TR), 0);
+    if(buff2TR != NULL)
+    {
+      // Answer result
+      send(gSocketInfo.clientfd, buff2TR, strlen(buff2TR), 0);
+      
+      // Buffer should be cleaned if it is not used anymore
+      free(buff2TR);
+    }
+    else
+    {
+      // Construct an answer
+      char buff2Send[5];
+      memset(buff2Send, 0, 5);
+      snprintf(buff2Send, 5, "NULL");
+      
+      // Answer result
+      send(gSocketInfo.clientfd, buff2TR, strlen(buff2TR), 0);
+    }
     
     gOtherClarify -= 1;
-    
-    // Buffer should be cleaned if it is not used anymore
-    free(buff2TR);
   }
-  else if(retVal != 0)// Send back the received data thanks to the buff2TR
+  else if(retVal != 0)  // Inside request, result found: Send back the received data thanks to the buff2TR
   {
-    oroClientSendBack(buff2TR);
+    char * pch = NULL;
+    
+    pch = strchr(buff2TR, '\"');
+    
+    if(pch != NULL)
+    {
+      oroClientSendBack(buff2TR);
+    }
+    else
+    {
+      retVal = request(cpBuff2TR);
+    }
 
     // Buffer should be cleaned if it is not used anymore
     free(buff2TR);
   }
-  else if(gFindRequest)
+  else if(gFindRequest) // Inside request, result noy found: Ask the other system
   {
-    gFindRequest = false;
     retVal = request(cpBuff2TR);
   }
   else // Send back NULL
@@ -392,6 +412,9 @@ void oroClientCallback(const std_msgs::String::ConstPtr& msg)
     // Buffer should be cleaned if it is not used anymore
     free(buff2TR);
   }
+  
+  
+  gFindRequest = false;
 }
 
 
