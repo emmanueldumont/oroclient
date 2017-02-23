@@ -53,6 +53,11 @@
  */
 #define     SIZE_BUFF 256
 
+/*
+ * \def gFindRequest : Global variable to indicate if the current request is a Find request
+ */
+bool gFindRequest;
+
 
 /*
  * \struct  enCommand : Enum command -> Enum for the different implemented commands

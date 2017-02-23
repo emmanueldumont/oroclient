@@ -81,7 +81,8 @@ char * parserMsgFromClient(const std_msgs::String::ConstPtr& msg)
         case CMD_ADD_PROP : retMsg2Send = addInstanceManager(str);
         break;
         // Command Find something
-        case CMD_FIND : retMsg2Send = findCommandManager(str);
+        case CMD_FIND :     gFindRequest = true;
+                            retMsg2Send = findCommandManager(str);
         break;
         // Command Remove
         case CMD_REMOVE : retMsg2Send = rmvCommandManager(str);

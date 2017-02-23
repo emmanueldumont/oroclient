@@ -115,8 +115,10 @@ int main(int argc, char ** argv)
     fd_set rfds;                        // Set to watchout for select
     
     gOtherClarify = 0;                  // Initialize the global variable for clarification request
+    
+    gFindRequest = false;               // Initialize the global variable for find request
 	  
-	  /*---Create streaming socket---*/
+	  // Create streaming socket
     if ( (gSocketInfo.otherSocket = socket(AF_INET, SOCK_STREAM, 0)) < 0 )
 	  {
 		  perror("Socket");
@@ -343,11 +345,16 @@ void oroClientCallback(const std_msgs::String::ConstPtr& msg)
 {
   int retVal = 0; // Return value of function
   char * buff2TR = NULL;      // Buffer to send TO FREE AT THE END !
+  char cpbuff2TR[SIZE_BUFF];
   
   ROS_INFO("- Received packet: --%s--", msg->data.c_str());
   
   // Parse the message and manage what to do
   buff2TR = parserMsgFromClient(msg);
+  
+  // Copy the buff2TR
+  memset(cpbuff2TR, 0, SIZE_BUFF);
+  snprintf(cpbuff2TR, SIZE_BUFF, "%s", buff2TR);
   
   // Get the answer from OROServer (or NULL if problem)
   if(buff2TR != NULL)
@@ -372,6 +379,11 @@ void oroClientCallback(const std_msgs::String::ConstPtr& msg)
     // Buffer should be cleaned if it is not used anymore
     free(buff2TR);
   }
+  else if(gFindRequest)
+  {
+    gFindRequest = false;
+    retVal = request(cpbuff2TR);
+  }
   else // Send back NULL
   {
     char nullStr[] = "[]";
@@ -380,8 +392,6 @@ void oroClientCallback(const std_msgs::String::ConstPtr& msg)
     // Buffer should be cleaned if it is not used anymore
     free(buff2TR);
   }
-  
-  
 }
 
 
@@ -417,4 +427,53 @@ void oroClientSendBack(char * buff2Send)
   
   usleep(500000);
   
+}
+
+int request(char * request)
+{
+  int sock;
+  struct sockaddr_in server;
+  char server_reply[SIZE_BUFF];
+  
+  char * subStr = NULL;
+   
+  //Create socket
+  sock = socket(AF_INET , SOCK_STREAM , 0);
+  if (sock == -1)
+  {
+      printf("Could not create socket");
+      return -1;
+  }
+   
+  server.sin_addr.s_addr = inet_addr(OTHER_ADDRESS);
+  server.sin_family = AF_INET;
+  server.sin_port = htons( OTHER_PORT );
+
+  //Connect to remote server
+  if (connect(sock , (struct sockaddr *)&server , sizeof(server)) < 0)
+  {
+      ROS_INFO("- Error: Request connect failed");
+      return -1;
+  }
+  
+  ROS_INFO("- Request message: --%s--", request);
+   
+  //Send some data
+  if( send(sock , request , strlen(request) , 0) < 0)
+  {
+      ROS_INFO("- Error: Request send failed");
+      return -1;
+  }
+   
+  //Receive a reply from the server
+  if( recv(sock , server_reply , SIZE , 0) < 0)
+  {
+      ROS_INFO("- Error: Request recv failed");
+      return -1;
+  }
+   
+  ROS_INFO("- Request server reply: --%s--",server_reply);
+  
+  close(sock);
+  return 0;
 }
