@@ -254,7 +254,6 @@ int main(int argc, char ** argv)
 
         ROS_INFO("- Received buffer from outside --%s-%d-", rcvBuffer, sizeBuff);
         
-        
         ros::NodeHandle n;
         ros::Publisher oroChatter_pub = n.advertise<std_msgs::String>("oroChatter", 1000);
         usleep(300000); // Necessary to initialize the ros system
@@ -342,7 +341,7 @@ void oroClientCallback(const std_msgs::String::ConstPtr& msg)
 {
   int retVal = 0; // Return value of function
   char * buff2TR = NULL;      // Buffer to send TO FREE AT THE END !
-  char cpBuff2TR[SIZE_BUFF];
+  //char cpBuff2TR[SIZE_BUFF];
   
   ROS_INFO("- Received packet: --%s--", msg->data.c_str());
   
@@ -350,8 +349,8 @@ void oroClientCallback(const std_msgs::String::ConstPtr& msg)
   buff2TR = parserMsgFromClient(msg);
   
   // Copy the buff2TR
-  memset(cpBuff2TR, 0, SIZE_BUFF);
-  snprintf(cpBuff2TR, SIZE_BUFF, "%s", buff2TR);
+  //memset(cpBuff2TR, 0, SIZE_BUFF);
+  //snprintf(cpBuff2TR, SIZE_BUFF, "%s", buff2TR);
   
   // Get the answer from OROServer (or NULL if problem)
   if(buff2TR != NULL)
@@ -397,7 +396,7 @@ void oroClientCallback(const std_msgs::String::ConstPtr& msg)
     }
     else if(gFindRequest && pch == NULL) // If Find command and no knowledge
     {
-      retVal = request(cpBuff2TR);
+      retVal = request(msg->data.c_str());
     }
     else // If not Find command
     {
@@ -407,7 +406,7 @@ void oroClientCallback(const std_msgs::String::ConstPtr& msg)
   }
   else if(gFindRequest) // Inside request, result noy found: Ask the other system
   {
-    retVal = request(cpBuff2TR);
+    retVal = request(msg->data.c_str());
   }
   else // Send back NULL
   {
@@ -457,7 +456,7 @@ void oroClientSendBack(char * buff2Send)
   
 }
 
-int request(char * request)
+int request(const char * request)
 {
   int sock;
   struct sockaddr_in server;
