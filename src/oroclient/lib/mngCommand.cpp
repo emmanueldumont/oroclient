@@ -253,15 +253,16 @@ char * findCommandManager(char * str)
     
   // As strtok has been initialized in the "parserMsgFromClient" function, we can just call it again
   // Declare the necessary number of char* for the argument
-  char * argN[2] = {NULL, NULL};
+  char * argN[3] = {NULL, NULL, NULL};
   
   // Get arg1 &2
   argN[0] = strtok (NULL,DELIMITER);
   argN[1] = strtok (NULL,DELIMITER);
+  argN[2] = strtok (NULL,DELIMITER);
   
-  if( (argN[0] == NULL) || (argN[1] == NULL) )
+  if( (argN[0] == NULL) || (argN[1] == NULL) || (argN[2] == NULL))
   {
-    ROS_INFO("\t- ERROR when parsing command, Not enough Argument in the asked command. Should be ID#Command#Arg1#Arg2");
+    ROS_INFO("\t- ERROR when parsing command, Not enough Argument in the asked command. Should be ID#Command#Arg1#Arg2#Arg3");
     
     
     free(retMsg2Send);
@@ -270,7 +271,7 @@ char * findCommandManager(char * str)
   }
   
   // Check if size of the buffer is enough :
-  sizeStr = strlen("find\no\n[?o ") + strlen(argN[0]) + strlen(argN[1]) + strlen (" ]\n#end#\n"); // We add at the end 1 space: there is one between arg1 and Arg2
+  sizeStr = strlen("find\no\n[") + strlen(argN[0]) + strlen(argN[1]) + strlen(argN[2]) + strlen ("  ]\n#end#\n"); // We add at the end 1 space: there is one between arg1 and Arg2
   if( sizeStr >= SIZE_BUFF)
   {
     ROS_INFO("\t- ERROR when parsing command, Not enough ");
@@ -283,7 +284,7 @@ char * findCommandManager(char * str)
           
   // From now, we are sure that there is enough space
   // But as "Prudence as the "mother" of all virtues"
-  sizeStr = snprintf(retMsg2Send, SIZE_BUFF,"find\no\n[?o %s %s]\n#end#\n",argN[0], argN[1]);
+  sizeStr = snprintf(retMsg2Send, SIZE_BUFF,"find\no\n[%s %s %s]\n#end#\n",argN[0], argN[1], argN[2]);
   
   return retMsg2Send;
 }

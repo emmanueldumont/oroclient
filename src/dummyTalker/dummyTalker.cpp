@@ -52,6 +52,10 @@ void oroAnswerCallback(const std_msgs::String::ConstPtr& msg)
     do
     {
       ROS_INFO("found %s\n", knowledge);
+      
+      char cmdMove[256];
+      snprintf(cmdMove, 256, "python /home/oculus/workspace/script/reachWP.py %s",knowledge);
+      
       knowledge = strtok (NULL, "\",");
     }while (knowledge !=NULL);
   }
@@ -132,15 +136,15 @@ int main(int argc, char **argv)
    * given as a template parameter to the advertise<>() call, as was done
    * in the constructor above.
    */
-  oroChatter_pub.publish(msg);
+  //oroChatter_pub.publish(msg);
   
-  sleep(1);
+  //sleep(1);
   
 
   
   ss.str("");
   enumCmd = (char)CMD_FIND;
-  ss << "BigBrother#"<<enumCmd<<"#isIn#Kitchen";
+  ss << "BigBrother#"<<enumCmd<<"remi#isIn#?o";
   msg.data = ss.str();
   
   ROS_INFO("%s", msg.data.c_str());
