@@ -7,10 +7,13 @@
 
 void oroAnswerCallback(const std_msgs::String::ConstPtr& msg)
 {
-
-  char * ok = NULL;  // Ok of the sender
-  char * knowledge = NULL; // Knowledge asked by the client
   char * str = NULL; // Local copy of the message received from the connected chatter
+  char * knowledge = NULL; // Knowledge asked by the client
+  
+  char * strStart = NULL;
+  char * strStop = NULL;
+  char subStr[128];
+  
   int sizeStr = 0;
     
   ROS_INFO ("- Parsing received message");
@@ -25,14 +28,37 @@ void oroAnswerCallback(const std_msgs::String::ConstPtr& msg)
   // Reinit data
   sizeStr = 0;
   
-  // Parse with the Delimiter and take the command
-  // The id received from the client is not used currently
-  ok = strtok (str,"\n");
-  knowledge = strtok (NULL,"\n");
+  // Parse with the Delimiter and get the knowledge if any
   
   ROS_INFO("%s", msg->data.c_str());
   
-  //exit(EXIT_SUCCESS);
+  memset(subStr, 0, 128);
+    
+  // Preprocessing to remove OK and #end#
+  strStart = strchr(str, '\"');
+  
+  // If there is knowledge
+  if(strStart != NULL)
+  {
+    // Find the last occurence of this delimiter
+    strStop = strrchr(str, '\"');
+    int size = strStop-strStart+1;
+    
+    // Create the substring
+    memcpy(subStr, strStart, (size<128)?size:128);
+    
+    // Extract individual knowlege
+    knowledge = strtok (subStr,"\",");
+    do
+    {
+      ROS_INFO("found %s\n", knowledge);
+      knowledge = strtok (NULL, "\",");
+    }while (knowledge !=NULL);
+  }
+  else // If no Knowledge has been returned
+  {
+    ROS_INFO("- Warning: No information found");
+  }
 
 }
 
@@ -80,6 +106,10 @@ int main(int argc, char **argv)
   ros::Publisher oroChatter_pub = n.advertise<std_msgs::String>("oroChatter", 1000);
   usleep(300000); // Necessary to initialize the ros system
 
+  // Create the subscriber
+	ros::NodeHandle ns;
+	ros::Subscriber sub = ns.subscribe("oroChatterSendBack", 1000, oroAnswerCallback);
+	
   ros::Rate loop_rate(10);
 
   /**
@@ -106,9 +136,6 @@ int main(int argc, char **argv)
   
   sleep(1);
   
-  // Create the subscriber
-	ros::NodeHandle ns;
-	ros::Subscriber sub = ns.subscribe("oroChatterSendBack", 1000, oroAnswerCallback);
 
   
   ss.str("");

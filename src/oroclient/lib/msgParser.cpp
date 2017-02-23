@@ -179,7 +179,7 @@ int orosender(char * buff2TR)
         return 0;
     }
     // Else if timeout
-    else if(!ret)
+    else if(ret == 0)
     {
         ROS_INFO("\t- Error: timeout read from server");
         free(buff2TR);

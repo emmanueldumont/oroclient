@@ -16,6 +16,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <sys/time.h>
+
 #include <signal.h>         // Handling ctrl+C signal to close everything properly
 #include <unistd.h>         // Manages sleep() close()
 
@@ -32,9 +34,13 @@
 #include "ros/ros.h"
 #include "std_msgs/String.h"
 
+#include <orolib/orolib.hpp>
+
 // Inner lib
 #include "lib/msgParser.h"
 
+
+int gOtherClarify;
 
 
 ////////////////////////////////////////////
@@ -99,7 +105,47 @@ int main(int argc, char ** argv)
 
     int ret = 0;                        // Return value for the select
     struct timeval tv;                  // Select Timeout
+       
+    struct sockaddr_in self;            // Host server info
+    char rcvBuffer[SIZE_BUFF];          // Received buffer
+    
+    
+    struct timeval sTv;                 // Select timeout for accepting connection
+    int retval = 0;                     // Returned value in the select
+    fd_set rfds;                        // Set to watchout for select
+    
+    gOtherClarify = 0;                  // Initialize the global variable for clarification request
+	  
+	  /*---Create streaming socket---*/
+    if ( (gSocketInfo.otherSocket = socket(AF_INET, SOCK_STREAM, 0)) < 0 )
+	  {
+		  perror("Socket");
+		  exit(errno);
+	  }
 
+	  // Initialize address/port structure "clarification" socket
+	  bzero(&self, sizeof(self));
+	  self.sin_family = AF_INET;
+	  self.sin_port = htons(OTHER_PORT);
+	  self.sin_addr.s_addr = INADDR_ANY;
+
+	  // Assign a port number to the "clarification" socket
+      if ( bind(gSocketInfo.otherSocket, (struct sockaddr*)&self, sizeof(self)) != 0 )
+	  {
+		  perror("socket--bind");
+		  exit(errno);
+	  }
+
+	  // Make it a "listening socket" "clarification" socket
+	  if ( listen(gSocketInfo.otherSocket, 20) != 0 )
+	  {
+		  perror("socket--listen");
+		  exit(errno);
+	  }
+	
+    memset(rcvBuffer, 0, SIZE_BUFF);
+	  struct sockaddr_in client_addr;
+	  socklen_t addrlen = sizeof(client_addr);
 
     // Clear buffer
     memset(address,'\0',32);
@@ -110,6 +156,7 @@ int main(int argc, char ** argv)
     
     // You must call one of the versions of ros::init() before using any other part of the ROS system.
     ros::init(argc, argv, "oroclient");
+    
     // NodeHandle is the main access point to communications with the ROS system
     ros::NodeHandle n;
     
@@ -165,9 +212,80 @@ int main(int argc, char ** argv)
     // When oroserver-client is fully functionnal launch the ROS client-server
     // The subscribe() call is how you tell ROS that you want to receive messages on a given topic.
     ros::Subscriber sub = n.subscribe("oroChatter", 1000, oroClientCallback);
+    
+    ros::Rate r(1); // r.sleep next
+    std::vector<int> connected;
+    
+    // Spin is done after
+    int max = gSocketInfo.otherSocket+1;
+    do
+    {
+      
+      max = gSocketInfo.otherSocket+1;
 
-    // ros::spin() will enter a loop, pumping callbacks.
-    ros::spin();
+      // Create a set to watch for select
+      FD_ZERO(&rfds);
+      FD_SET(gSocketInfo.otherSocket, &rfds);
+      
+      // Wait up to one second. (select accept ouside connection)
+      sTv.tv_sec = 1;   sTv.tv_usec = 0;
+      
+      // Check if received message from other system
+      retval = select(max, &rfds, NULL, NULL, &sTv);
+
+      if (retval == -1)
+      {
+        ROS_INFO("- ERROR: select()");
+        exit(EXIT_FAILURE);
+      }
+      else if (retval == 0){
+        ROS_INFO("- No data within One second");
+      }
+      else // Accept a connection (creating a data pipe)
+      {
+        ROS_INFO("- Accepting Outside communication");
+        gSocketInfo.clientfd = accept(gSocketInfo.otherSocket, (struct sockaddr*)&client_addr, (socklen_t*) &addrlen);
+        ROS_INFO("- %s:%d connected\n", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));
+
+        // Once publish on OroChatter
+        int sizeBuff = recv(gSocketInfo.clientfd, rcvBuffer, SIZE_BUFF, 0);
+
+        ROS_INFO("- Received buffer from outside --%s-%d-", rcvBuffer, sizeBuff);
+        
+        
+        ros::NodeHandle n;
+        ros::Publisher oroChatter_pub = n.advertise<std_msgs::String>("oroChatter", 1000);
+        usleep(300000); // Necessary to initialize the ros system
+
+        ros::Rate loop_rate(10);
+        std_msgs::String msg;
+
+        std::stringstream ss;
+        std::string s(rcvBuffer);
+
+        char enumCmd = 0;
+        enumCmd = (char)CMD_FIND;
+        ss << "BigBrother#"<<enumCmd<<s;
+        msg.data = ss.str();
+
+        ROS_INFO("%s", msg.data.c_str());
+        
+        // Indicate that this is an outside request
+        gOtherClarify += 1;
+        
+        // Send the command to the system
+        oroChatter_pub.publish(msg);
+        loop_rate.sleep();
+      }
+    
+      ROS_INFO("- Machin false");
+      // Check if received message from local node on oroChatter
+      ros::spinOnce();
+      r.sleep();
+      
+      
+    }while(retval != -1); // While no errors on select
+
 
     ROS_INFO("- Close the socket\n");
     closesocket(gSocketInfo.socket);
@@ -204,6 +322,7 @@ void sigint_handler(int dummy)
         ROS_INFO("\t- Closing socket... ");
         closesocket(gSocketInfo.socket);
         gSocketInfo.socket = 0;
+        gSocketInfo.otherSocket = 0;
     
         ROS_INFO(" Done !\n");
     }
@@ -236,14 +355,33 @@ void oroClientCallback(const std_msgs::String::ConstPtr& msg)
     retVal = orosender(buff2TR);
   }
   
-  // Send back the received data thanks to the buff2TR
-  if(retVal != 0)
+  if(gOtherClarify > 0)
+  {
+    // Answer result
+    send(gSocketInfo.clientfd, buff2TR, strlen(buff2TR), 0);
+    
+    gOtherClarify -= 1;
+    
+    // Buffer should be cleaned if it is not used anymore
+    free(buff2TR);
+  }
+  else if(retVal != 0)// Send back the received data thanks to the buff2TR
   {
     oroClientSendBack(buff2TR);
 
     // Buffer should be cleaned if it is not used anymore
     free(buff2TR);
   }
+  else // Send back NULL
+  {
+    char nullStr[] = "[]";
+    oroClientSendBack(nullStr);
+
+    // Buffer should be cleaned if it is not used anymore
+    free(buff2TR);
+  }
+  
+  
 }
 
 
@@ -269,14 +407,14 @@ void oroClientSendBack(char * buff2Send)
   
   ROS_INFO("- Send back: --%s--",buff2Send);
   
+
   // Reconstruct the mesasge to send
   std::string s(buff2Send);
   msg2Send.data = s;
   
-  
   // Publish the returned message
   oroChatter_pub.publish(msg2Send);
   
-  ros::spinOnce();
-  loop_rate.sleep();
+  usleep(500000);
+  
 }

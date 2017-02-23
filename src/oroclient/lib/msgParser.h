@@ -35,6 +35,15 @@
 #define     ORO_PORT    6969
 
 /*
+ * \def ORO_ADDRESS "127.0.0.1" : IP Address of the OROServer (put as a String)
+ */
+#define     OTHER_ADDRESS "127.0.0.1"
+/*
+ * \def ORO_PORT 6969 : PORT of the OROServer (put as a String)
+ */
+#define     OTHER_PORT    32768
+
+/*
  * \def TIMEOUT_SVR 5 : Define a server timeout identical for everybody
  */
 #define     TIMEOUT_SVR 5
@@ -71,6 +80,8 @@ typedef struct oroClGlobalSocket
     SOCKADDR_IN sin;
     int sinSize;
     fd_set rdfs;                        // Read descriptor
+    SOCKET otherSocket;
+    int clientfd;
 }t_oroClGlobalSocket;
 
 /*
