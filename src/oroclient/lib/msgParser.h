@@ -37,7 +37,7 @@
 /*
  * \def ORO_ADDRESS "127.0.0.1" : IP Address of the OROServer (put as a String)
  */
-#define     OTHER_ADDRESS "127.0.0.1"
+#define     OTHER_ADDRESS "192.168.0.133"
 /*
  * \def ORO_PORT 6969 : PORT of the OROServer (put as a String)
  */
